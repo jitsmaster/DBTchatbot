@@ -19,7 +19,7 @@ import { DOMParser } from "xmldom";
 import xpath from "xpath";
 import { iterableArray } from "./IterateUntil";
 import { HtmlFilter, XmlFilter, type DocumentExtractionFilterBase } from "./WebSocketModels";
-import { OllamaEmbeddings } from "@langchain/ollama";
+import { OllamaEmbeddings, ChatOllama } from "@langchain/ollama";
 
 
 export class ChromaVectorStore {
@@ -27,7 +27,7 @@ export class ChromaVectorStore {
 	splitter: RecursiveCharacterTextSplitter;
 	chromaStore: Chroma;
 	constructor(
-		private gpt: ChatOpenAI,
+		private gpt: ChatOllama,
 		private chromaEndpoint: string,
 		private collectionName: string,
 		private maxQueryConcurrency: number = 4) {
