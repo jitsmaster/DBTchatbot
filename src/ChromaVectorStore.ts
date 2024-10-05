@@ -151,6 +151,7 @@ export class ChromaVectorStore {
 		//merge together all the content
 		const chunks = (await Promise.all(processedContent
 			.map(async content => {
+				console.log(`Splitting ${JSON.stringify(content.metadata)}`);
 				const contentResult = await content;
 				if (!contentResult || !contentResult.content)
 					return [];
@@ -164,8 +165,10 @@ export class ChromaVectorStore {
 			})))
 			.flat();
 
+		let counter = 0;
 		docs.push(...chunks
 			.map(chunk => new Document({
+				id: chunk.metadata.url + counter,
 				pageContent: chunk.content,
 				metadata: {
 					...chunk.metadata,
@@ -173,8 +176,25 @@ export class ChromaVectorStore {
 				}
 			})));
 
-		const res = await this.chromaStore.addDocuments(docs);
-		console.log(`Upserted ${docs.length} documents from ${source}, result: ${res}`);
+		//batch processing every 5 docs
+		let buffer = [];
+		let finalRes = [];
+		for (let doc of docs) {
+			console.log(`Doc: ${doc.pageContent}`);
+			buffer.push(doc);
+			if (buffer.length === 5) {
+				console.log(`indexing ${buffer.length} docs`)
+				finalRes.push(await this.chromaStore.addDocuments(buffer));
+				buffer.length = 0;
+			}
+		}
+
+		if (buffer.length > 0) {
+			console.log(`indexing ${buffer.length} docs`)
+			finalRes.push(await this.chromaStore.addDocuments(buffer));
+		}
+
+		console.log(`Upserted ${docs.length} documents from ${source}, result: ${finalRes}`);
 	}
 
 	async clear() {
@@ -239,8 +259,8 @@ export class ChromaVectorStore {
 		const promptTemplate = `You are an assistant for question-answering tasks. 
 			Use the following pieces of retrieved context to answer the question. 
 			If you don't know the answer, just say that you don't know. 
+			If there is no context, just say that you didn't find the answer.
 			If the context is html, make sure to include the id of the page, replace the part of the url from # character.
-			If the context is code, make sure to include sample code blocks.
 			Also, make sure to follow the additional instructions on providing the answers, if the additional instructions are provided.
 			Return the answer in MarkDown format.
 			${addiIntrucTemplate}

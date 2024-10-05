@@ -2,6 +2,7 @@ import fs from 'fs';
 import pdf from 'pdf-parse';
 
 async function loadPdf(filePath: string): Promise<string> {
+    console.log(filePath);
     const dataBuffer = fs.readFileSync(filePath);
     try {
         const data = await pdf(dataBuffer);

@@ -4,6 +4,7 @@ import { ChatOllama, Ollama } from '@langchain/ollama';
 import path from "path"
 import fs from "fs"
 import loadPdf from './PdfLoader';
+import {createWsServer} from './WebSocket'
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -49,7 +50,8 @@ app.post('/upsert', async (req: Request, res: Response) => {
 		});
 		res.status(200).send('Vector upserted successfully');
 	} catch (error) {
-		res.status(500).send('Error upserting vector');
+		console.error(error);
+		res.status(500).send('Error upserting vector' + error);
 	}
 });
 
@@ -76,6 +78,15 @@ app.post('/qna', async (req: Request, res: Response) => {
 	}
 });
 
-app.listen(PORT, () => {
+const httpServer = app.listen(PORT, () => {
 	console.log(`Server is running on port ${PORT}`);
 });
+
+const wsServer = createWsServer();
+
+//piggy back ws on the http server
+httpServer.on('upgrade', (req, socket, head) => {
+	wsServer.handleUpgrade(req, socket, head, (ws: any) => {
+		wsServer.emit('connection', ws, req)
+	})
+})
